@@ -11,7 +11,7 @@ entity expander is port
 end;
 
 architecture arch of expander is
-	signal counter : unsigned(15 downto 0) := (others => '0');
+	signal counter : unsigned(8 downto 0) := (others => '0');
 	signal state 	: std_logic := '0';
 begin
 	process(clock, reset, in_signal, counter)
@@ -27,7 +27,7 @@ begin
 				
 				if in_signal='1' and state='0' then
 					state <= '1';
-				elsif counter="1111111111111111" then
+				elsif counter="111111111" then
 					counter <= (others => '0');
 					state <= '0';
 				end if;

@@ -3,29 +3,28 @@ unsigned short const F_AF=10, F_FA=11, BTN=12;
 unsigned short const BIT_PIN[8] = {2,3,4,5,6,7,8,9}; // pin 2 = LSB, pin 9 MSB
 
 // constants
-byte const test_size = 5;
+byte const test_size = 6;
 byte const op1[test_size]     = {7,10,8,16,3};
 byte const op2[test_size]     = {1,9,5,4,7};
 byte const code[test_size]    = {0,1,2,3,0}; // 0 add 1 sub 2 mul 3 div
 byte const result[test_size]  = {8,1,40,4,10};
-unsigned long const threshold = 1000;
 
 // variables
 byte correct = 0;
 
-void sendDelta() {
+void notify() {
   digitalWrite(F_AF,HIGH);
-  delayMicroseconds(10);
+  while(digitalRead(F_FA)==0){}  
   digitalWrite(F_AF,LOW);
+  while(digitalRead(F_FA)==1){}
 }
 
 void sendCode(byte i) {
   // code is sent using the two LSB
-  digitalWrite(bitRead(code[i],0), BIT_PIN[0]);
-  digitalWrite(bitRead(code[i],1), BIT_PIN[1]);
+  digitalWrite(BIT_PIN[0], bitRead(code[i],0));
+  digitalWrite(BIT_PIN[1], bitRead(code[i],1));
   
-  sendDelta();
-  delay(1);
+  notify();
 }
 
 void sendOp(byte opnum, byte i) {
@@ -38,14 +37,15 @@ void sendOp(byte opnum, byte i) {
     else
       Serial.println("ERROR sendOp");
     
-    digitalWrite(b, BIT_PIN[j]);
+    digitalWrite(BIT_PIN[j], b);
   }
     
-  sendDelta();
-  delayMicroseconds(1);
+  notify();
 }
 
 byte readResult(){
+  while(digitalRead(F_FA)==0){}
+    
   setBitPinsMode(INPUT); // set as input
   
   byte result = 0;
@@ -54,21 +54,11 @@ byte readResult(){
     
   setBitPinsMode(OUTPUT); // set back to output which is the most used case
 
-  return result;
-}
-
-bool waitForPositiveEdge(){
-  byte r0=0, r1=0;
-  unsigned long s = millis();
+  digitalWrite(F_AF, HIGH);
+  while(digitalRead(F_FA)==1){}
+  digitalWrite(F_AF, LOW);
   
-  while( not(r0==1 and r1==0) ){
-    if( millis()-s > threshold)
-      return false;
-      
-    r1 = r0;
-    r0 = digitalRead(F_FA);
-  }
-  return true;
+  return result;
 }
 
 // v=0 INPUT, v=1 OUTPUT
@@ -102,40 +92,33 @@ void loop() {
     while(digitalRead(F_FA)==HIGH){}
 
     // send code
-    Serial.println(1);
-    do{
-      sendCode(i);
-    }while(not waitForPositiveEdge());
-    delay(1000);
+    // Serial.println(1);
+    sendCode(i);
 
-    //send op1
-    Serial.println(2);
-    do{
-      sendOp(1,i);
-    }while(not waitForPositiveEdge());
-    delay(1000);
+    // send op1
+    // Serial.println(2);
+    sendOp(1,i);
 
-    //send op2
-    Serial.println(3);
-    do{
-      sendOp(2,i);
-    }while(not waitForPositiveEdge());
-    delay(1000);
+    // send op2
+    // Serial.println(3);
+    sendOp(2,i);
 
-    Serial.println(4);
+    // Serial.println(4);
     
     byte r = 0;
     r = readResult();
-    Serial.print("Result: ");
-    Serial.println(r);
+    // Serial.print("Result: ");
+    // Serial.println(r);
     
     if(r==result[i])
       correct++;
   }
-  Serial.println("Result -- Number of correct computations");
-  Serial.println(correct);
+  Serial.print("Correct computations: ");
+  Serial.print(correct);
+  Serial.print("/");
+  Serial.println(test_size);
+  
   while(1){
-    Serial.println("END");
     delay(10000);  
   }
 }

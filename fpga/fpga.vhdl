@@ -28,7 +28,7 @@ architecture arch of fpga is
 	 constant S_ACK_REC		: std_logic_vector(3 downto 0) := "1000";
 begin
 	f_fa <= '1' when cs=S_FETCH_C or cs=S_FETCH_OP1 or cs=S_FETCH_OP2 or cs=S_NOTIFY else '0';
-	state <= cs;
+	state <= code(3 downto 0);
 	
 	process(code, op1, op2)
 	begin
@@ -68,33 +68,33 @@ begin
 		end if;
 	end process;
 	
-	next_state: process(cs, f_af)
+	next_state: process(cs, f_af, is_stable)
 	begin
 		ns <= cs;
 		case(cs) is
-			when S_IDLE 	=> if f_af='1' then
+			when S_IDLE 	=> if f_af='1' and is_stable='1' then
 										ns <= S_FETCH_C; 
 									end if;
-			when S_FETCH_C =>	if f_af='0' then
+			when S_FETCH_C =>	if f_af='0' and is_stable='1' then
 										ns <= S_WAIT_C;
 									end if;
-			when S_WAIT_C 	=>	if f_af='1' then
+			when S_WAIT_C 	=>	if f_af='1' and is_stable='1' then
 										ns <= S_FETCH_OP1;
 									end if;
-			when S_FETCH_OP1 	=>	if f_af='0' then
+			when S_FETCH_OP1 	=>	if f_af='0' and is_stable='1' then
 										ns <= S_WAIT_OP1;
 									end if;
-			when S_WAIT_OP1 	=>	if f_af='1' then
+			when S_WAIT_OP1 	=>	if f_af='1' and is_stable='1' then
 											ns <= S_FETCH_OP2;
 										end if;
-			when S_FETCH_OP2 	=>	if f_af='0' then
+			when S_FETCH_OP2 	=>	if f_af='0' and is_stable='1' then
 											ns <= S_WAIT_OP2;
 										end if;
 			when S_WAIT_OP2 	=>	ns <= S_NOTIFY;
-			when S_NOTIFY 		=>	if f_af='1' then
+			when S_NOTIFY 		=>	if f_af='1' and is_stable='1' then
 											ns <= S_ACK_REC;
 										end if;
-			when S_ACK_REC		=>	if f_af='0' then
+			when S_ACK_REC		=>	if f_af='0' and is_stable='1' then
 											ns <= S_IDLE;
 										end if;
 			when others =>  ns <= cs;
