@@ -8,14 +8,15 @@ byte const op1[test_size]     = {7,10,8,16,3};
 byte const op2[test_size]     = {1,9,5,4,7};
 byte const code[test_size]    = {0,1,2,3,0}; // 0 add 1 sub 2 mul 3 div
 byte const result[test_size]  = {8,1,40,4,10};
+unsigned long const threshold = 1000;
 
 // variables
 byte correct = 0;
 
 void sendDelta() {
-  digitalWrite(F_AF,LOW);
-  delay(1);
   digitalWrite(F_AF,HIGH);
+  delayMicroseconds(10);
+  digitalWrite(F_AF,LOW);
 }
 
 void sendCode(byte i) {
@@ -41,7 +42,7 @@ void sendOp(byte opnum, byte i) {
   }
     
   sendDelta();
-  delay(1);
+  delayMicroseconds(1);
 }
 
 byte readResult(){
@@ -56,12 +57,18 @@ byte readResult(){
   return result;
 }
 
-void waitForPositiveEdge(){
+bool waitForPositiveEdge(){
   byte r0=0, r1=0;
+  unsigned long s = millis();
+  
   while( not(r0==1 and r1==0) ){
+    if( millis()-s > threshold)
+      return false;
+      
     r1 = r0;
     r0 = digitalRead(F_FA);
   }
+  return true;
 }
 
 // v=0 INPUT, v=1 OUTPUT
@@ -72,6 +79,7 @@ void setBitPinsMode(byte v) {
 
 void setup() {
   Serial.begin(9600);
+  Serial.println("Setup");
   
   pinMode(F_FA, INPUT);
   pinMode(BTN, INPUT);
@@ -83,22 +91,44 @@ void setup() {
     digitalWrite(BIT_PIN[i], LOW);
 }
 
-byte state = 0;
 void loop() {
   while(digitalRead(BTN)==LOW){}
+  Serial.println("Loop");
   
   for(byte i=0; i<test_size; i++){
+    Serial.print("Test num: ");
+    Serial.println(i);
     // check if busy
     while(digitalRead(F_FA)==HIGH){}
 
     // send code
-    sendCode(i);
-    waitForPositiveEdge();
-    sendOp(1,i);
-    waitForPositiveEdge();
-    sendOp(2,i);
-    waitForPositiveEdge();
-    byte r = readResult();
+    Serial.println(1);
+    do{
+      sendCode(i);
+    }while(not waitForPositiveEdge());
+    delay(1000);
+
+    //send op1
+    Serial.println(2);
+    do{
+      sendOp(1,i);
+    }while(not waitForPositiveEdge());
+    delay(1000);
+
+    //send op2
+    Serial.println(3);
+    do{
+      sendOp(2,i);
+    }while(not waitForPositiveEdge());
+    delay(1000);
+
+    Serial.println(4);
+    
+    byte r = 0;
+    r = readResult();
+    Serial.print("Result: ");
+    Serial.println(r);
+    
     if(r==result[i])
       correct++;
   }
