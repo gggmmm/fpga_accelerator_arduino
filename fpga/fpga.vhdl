@@ -72,9 +72,7 @@ begin
 	begin
 		ns <= cs;
 		case(cs) is
-			when S_IDLE 	=> if f_af='1' and is_stable='1' then
-										ns <= S_FETCH_C; 
-									end if;
+			when S_IDLE 	=> if f_af='1' and is_stable='1' then ns <= S_FETCH_C; end if;
 			when S_FETCH_C =>	if f_af='0' and is_stable='1' then
 										ns <= S_WAIT_C;
 									end if;
